@@ -31,10 +31,11 @@ let score = 0;
 let selectedAnswer = -1;
 let timerInterval;
 let timeLeft = 30;
+let totalTimeBonus = 0;
 const totalQuestions = quizData.length;
 let highScore = localStorage.getItem("jsQuizHighScore") || 0;
 
-// Start the quiz
+// Event Listeners
 document.getElementById("start-btn").addEventListener("click", () => {
   document.getElementById("start-screen").style.display = "none";
   document.getElementById("question-container").style.display = "block";
@@ -43,7 +44,9 @@ document.getElementById("start-btn").addEventListener("click", () => {
 
 document.getElementById("next-btn").addEventListener("click", nextQuestion);
 document.getElementById("restart-btn").addEventListener("click", restartQuiz);
+document.getElementById("share-btn")?.addEventListener("click", shareResult);
 
+// Helper Functions
 function updateProgress() {
   const progress = ((currentQuestion + 1) / totalQuestions) * 100;
   document.getElementById("progress-fill").style.width = progress + "%";
@@ -101,6 +104,9 @@ function selectOption(index) {
     else if (i === index) opt.classList.add("incorrect");
   });
 
+  // Add time bonus (remaining seconds)
+  totalTimeBonus += timeLeft;
+
   document.getElementById("next-btn").style.display = "block";
 }
 
@@ -113,33 +119,75 @@ function nextQuestion() {
   else showScore();
 }
 
+// === NEW SHOWSCORE WITH ANIMATIONS ===
 function showScore() {
   clearInterval(timerInterval);
   document.getElementById("question-container").style.display = "none";
   document.getElementById("score-container").style.display = "block";
 
   const percentage = Math.round((score / totalQuestions) * 100);
+  const circle = document.querySelector(".progress-ring__circle");
+  const circumference = 502;
+  const offset = circumference - (percentage / 100) * circumference;
+  circle.style.strokeDashoffset = offset;
+
   document.getElementById("score-circle-text").textContent = score;
   document.getElementById("total-score").textContent = totalQuestions;
 
+  // Stats
+  document.getElementById("correct-count").textContent = score;
+  document.getElementById("wrong-count").textContent = totalQuestions - score;
+  document.getElementById("time-bonus").textContent = `+${totalTimeBonus}s`;
+
+  // Badge
+  const badge = document.getElementById("badge");
+  if (percentage >= 90) {
+    badge.textContent = "Gold";
+    badge.className = "badge gold";
+  } else if (percentage >= 70) {
+    badge.textContent = "Silver";
+    badge.className = "badge silver";
+  } else {
+    badge.textContent = "Bronze";
+    badge.className = "badge bronze";
+  }
+
+  // Feedback
   let feedback = "";
-  if (percentage >= 80) feedback = "Outstanding! You're a JS wizard. ";
-  else if (percentage >= 60) feedback = "Good job! Keep practicing. ";
-  else feedback = "Keep learning — you’ll get there! ";
+  if (percentage >= 90) feedback = "Masterful! You're a JavaScript legend!";
+  else if (percentage >= 70) feedback = "Excellent work! Keep pushing!";
+  else if (percentage >= 50) feedback = "Good effort! Practice makes perfect.";
+  else feedback = "Never give up! Every expert was once a beginner.";
   document.getElementById("feedback").textContent = feedback;
 
+  // High Score
   if (score > highScore) {
     highScore = score;
     localStorage.setItem("jsQuizHighScore", highScore);
     document.getElementById("high-score").style.display = "block";
     document.getElementById("high-score-val").textContent = highScore;
+
+    // Confetti only on new high score
+    confetti({
+      particleCount: 120,
+      spread: 80,
+      origin: { y: 0.6 }
+    });
   }
+}
+
+function shareResult() {
+  const text = `I scored ${score}/${totalQuestions} on the JavaScript Quiz! Can you beat me?`;
+  navigator.clipboard.writeText(text).then(() => {
+    alert("Result copied to clipboard!");
+  });
 }
 
 function restartQuiz() {
   score = 0;
   currentQuestion = 0;
   selectedAnswer = -1;
+  totalTimeBonus = 0;
   document.getElementById("score-container").style.display = "none";
   document.getElementById("question-container").style.display = "block";
   document.getElementById("high-score").style.display = "none";
